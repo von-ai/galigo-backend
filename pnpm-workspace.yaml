@@ -1,0 +1,8 @@
+allowBuilds:
+  '@prisma/client': true
+  '@prisma/engines': true
+  bcrypt: true
+  esbuild: false
+  msgpackr-extract: false
+  prisma: true
+  workerd: false

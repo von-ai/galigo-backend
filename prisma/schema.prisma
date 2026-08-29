@@ -1,0 +1,124 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [postgis]
+}
+
+// --- Auth (hanya untuk login Dishub) ---
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String   @default("admin")
+  createdAt    DateTime @default(now())
+}
+
+// Menandai asal data — dasar dari solusi "dummy dulu, MAPID nanti"
+enum DataSource {
+  mapid
+  manual
+}
+
+model Corridor {
+  id       String    @id @default(uuid())
+  name     String
+  slug     String    @unique
+  stations Station[]
+}
+
+model Station {
+  id         String                               @id @default(uuid())
+  corridorId String
+  corridor   Corridor                             @relation(fields: [corridorId], references: [id])
+  name       String
+  slug       String                               @unique
+  order      Int                                  @default(0)
+  // Kolom geometri: Prisma Client tidak bisa baca/tulis ini langsung,
+  // semua akses lewat $queryRaw / $executeRawUnsafe (lihat Fase 4).
+  geom       Unsupported("geometry(Point, 4326)")
+  dataSource DataSource                           @default(manual)
+  routes     Route[]
+  pois       Poi[]
+  estimates  TransportEstimate[]
+  createdAt  DateTime                             @default(now())
+  updatedAt  DateTime                             @updatedAt
+}
+
+enum TransportMode {
+  kereta
+  bus
+  pete_pete
+}
+
+model Route {
+  id         String                                     @id @default(uuid())
+  name       String
+  mode       TransportMode
+  stationId  String?
+  station    Station?                                   @relation(fields: [stationId], references: [id])
+  geom       Unsupported("geometry(LineString, 4326)")?
+  dataSource DataSource                                 @default(manual)
+  estimates  TransportEstimate[]
+  createdAt  DateTime                                   @default(now())
+}
+
+enum PoiCategory {
+  makan
+  musholla
+  atm
+  toilet
+  umkm
+  wisata
+}
+
+model Poi {
+  id         String                               @id @default(uuid())
+  name       String
+  category   PoiCategory
+  stationId  String?
+  station    Station?                             @relation(fields: [stationId], references: [id])
+  geom       Unsupported("geometry(Point, 4326)")
+  address    String?
+  dataSource DataSource                           @default(manual)
+  createdAt  DateTime                             @default(now())
+}
+
+// "Selalu rentang, tidak pernah hitung mundur" — sesuai design system.
+// isSurveyed=false = kartu putus-putus "Belum tersurvei".
+enum TimeBucket {
+  pagi
+  siang
+  sore
+  malam
+  tetap // jadwal tetap, misal keberangkatan kereta — pakai fixedTimeLabel
+}
+
+model TransportEstimate {
+  id             String        @id @default(uuid())
+  stationId      String
+  station        Station       @relation(fields: [stationId], references: [id])
+  routeId        String?
+  route          Route?        @relation(fields: [routeId], references: [id])
+  mode           TransportMode
+  timeBucket     TimeBucket
+  minMinutes     Int?
+  maxMinutes     Int?
+  fixedTimeLabel String?
+  isSurveyed     Boolean       @default(true)
+  sourceLabel    String
+}
+
+model AiSummary {
+  id                String   @id @default(uuid())
+  corridorId        String
+  content           String
+  model             String
+  dataSnapshotLabel String
+  createdAt         DateTime @default(now())
+}
