@@ -6,6 +6,8 @@ import cookieParser from 'cookie-parser';
 import authRoutes from './modules/auth/auth.routes.js';
 import stationsRoutes from './modules/stations/stations.routes.js';
 import poiRoutes from './modules/poi/poi.routes.js';
+import chatRoutes from './modules/chat/chat.routes.js';
+import insightsRoutes from './modules/insights/insight.routes.js';
 
 const app = express();
 
@@ -22,8 +24,9 @@ app.get('/health', (_req, res) => res.json({ ok: true }));
 app.use('/auth', authRoutes);
 app.use('/stations', stationsRoutes);
 app.use('/poi', poiRoutes);
+app.use('/chat', chatRoutes);
+app.use('/insights', insightsRoutes);
 
-// Selalu paling akhir — menangkap semua error yang lolos dari asyncHandler.
 app.use(
   (
     err: unknown,
