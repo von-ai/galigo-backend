@@ -105,9 +105,16 @@ async function main() {
   ] as const;
 
   for (const p of pois) {
+    const existing: { id: string }[] = await prisma.$queryRawUnsafe(
+      `SELECT id FROM "Poi" WHERE name = $1 AND "stationId" = $2 LIMIT 1`,
+      p.name,
+      stationIds[p.station],
+    );
+    if (existing.length > 0) continue;
+
     await prisma.$executeRawUnsafe(
       `INSERT INTO "Poi" (id, name, category, "stationId", geom, address, "dataSource", "createdAt")
-       VALUES (gen_random_uuid(), $1, $2::"PoiCategory", $3, ST_SetSRID(ST_MakePoint($4, $5), 4326), NULL, 'manual', now())`,
+     VALUES (gen_random_uuid(), $1, $2::"PoiCategory", $3, ST_SetSRID(ST_MakePoint($4, $5), 4326), NULL, 'manual', now())`,
       p.name,
       p.category,
       stationIds[p.station],
