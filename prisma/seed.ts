@@ -152,6 +152,68 @@ async function main() {
     ],
   });
 
+  // --- Garis rute: jalur kereta (menyambung 3 stasiun) + 2 trayek pete-pete di Barru ---
+  const routes: {
+    name: string;
+    mode: string;
+    stationId: string | null;
+    points: [number, number][];
+  }[] = [
+    {
+      name: 'Jalur Kereta Trans Sulawesi',
+      mode: 'kereta',
+      stationId: null,
+      points: [
+        [119.5613, -5.0631], // Mandai
+        [119.5721, -4.7962], // Pangkep
+        [119.6142, -4.4103], // Barru
+      ],
+    },
+    {
+      name: 'Pete-pete C3',
+      mode: 'pete_pete',
+      stationId: stationIds['stasiun-barru-garongkong'],
+      points: [
+        [119.6151, -4.4098],
+        [119.6165, -4.408],
+        [119.614, -4.4055],
+        [119.611, -4.407],
+        [119.612, -4.411],
+        [119.6142, -4.4103],
+      ],
+    },
+    {
+      name: 'Pete-pete B2',
+      mode: 'pete_pete',
+      stationId: stationIds['stasiun-barru-garongkong'],
+      points: [
+        [119.6142, -4.4103],
+        [119.61, -4.413],
+        [119.608, -4.416],
+        [119.611, -4.418],
+        [119.615, -4.415],
+      ],
+    },
+  ];
+
+  for (const r of routes) {
+    const existing: { id: string }[] = await prisma.$queryRawUnsafe(
+      `SELECT id FROM "Route" WHERE name = $1 LIMIT 1`,
+      r.name,
+    );
+    if (existing.length > 0) continue; // idempotent — pelajaran dari duplikat POI kemarin
+
+    const wkt = `LINESTRING(${r.points.map(([lng, lat]) => `${lng} ${lat}`).join(', ')})`;
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO "Route" (id, name, mode, "stationId", geom, "dataSource", "createdAt")
+     VALUES (gen_random_uuid(), $1, $2::"TransportMode", $3, ST_SetSRID(ST_GeomFromText($4), 4326), 'manual', now())`,
+      r.name,
+      r.mode,
+      r.stationId,
+      wkt,
+    );
+  }
+
   console.log('Seed selesai.');
 }
 

@@ -8,6 +8,7 @@ import stationsRoutes from './modules/stations/stations.routes.js';
 import poiRoutes from './modules/poi/poi.routes.js';
 import chatRoutes from './modules/chat/chat.routes.js';
 import insightsRoutes from './modules/insights/insight.routes.js';
+import routesRoutes from './modules/routes/routes.routes.js';
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.use('/stations', stationsRoutes);
 app.use('/poi', poiRoutes);
 app.use('/chat', chatRoutes);
 app.use('/insights', insightsRoutes);
+app.use('/routes', routesRoutes);
 
 app.use(
   (

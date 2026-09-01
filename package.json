@@ -18,6 +18,7 @@
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
   },
+  "packageManager": "pnpm@9.15.9",
   "dependencies": {
     "@google/genai": "^2.19.0",
     "@prisma/client": "^6.19.3",
