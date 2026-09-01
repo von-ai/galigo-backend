@@ -1,4 +1,5 @@
 version: '3.9'
+
 services:
   db:
     image: postgis/postgis:16-3.4-alpine
@@ -11,5 +12,18 @@ services:
       - '${POSTGRES_PORT}:5432'
     volumes:
       - galigo_db_data:/var/lib/postgresql/data
+
+  api:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - db
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: 'postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public'
+    ports:
+      - '3001:3001'
+
 volumes:
   galigo_db_data:

@@ -1,7 +1,11 @@
 // src/modules/stations/stations.routes.ts
 import { Router } from 'express';
 import { asyncHandler } from '../../middleware/async-handler.js';
-import { listStations, getStationBySlug } from './stations.service.js';
+import {
+  listStations,
+  getStationBySlug,
+  getSummary,
+} from './stations.service.js';
 
 const router = Router();
 
@@ -13,12 +17,20 @@ router.get(
 );
 
 router.get(
+  '/summary',
+  asyncHandler(async (_req, res) => {
+    // <-- HARUS di atas
+    res.json(await getSummary());
+  }),
+);
+
+router.get(
   '/:slug',
   asyncHandler(async (req, res) => {
+    // <-- HARUS di bawah
     const station = await getStationBySlug(req.params.slug);
-    if (!station) {
+    if (!station)
       return res.status(404).json({ message: 'Stasiun tidak ditemukan' });
-    }
     res.json(station);
   }),
 );

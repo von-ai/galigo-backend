@@ -1,0 +1,6 @@
+node_modules
+dist
+.env
+.git
+*.log
+pnpm-workspace.yaml
