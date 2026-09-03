@@ -39,10 +39,9 @@ model Station {
   name       String
   slug       String                               @unique
   order      Int                                  @default(0)
-  // Kolom geometri: Prisma Client tidak bisa baca/tulis ini langsung,
-  // semua akses lewat $queryRaw / $executeRawUnsafe (lihat Fase 4).
   geom       Unsupported("geometry(Point, 4326)")
   dataSource DataSource                           @default(manual)
+  mapidId    String?                              @unique
   routes     Route[]
   pois       Poi[]
   estimates  TransportEstimate[]
@@ -57,15 +56,18 @@ enum TransportMode {
 }
 
 model Route {
-  id         String                                     @id @default(uuid())
+  id         String                                   @id @default(uuid())
   name       String
   mode       TransportMode
   stationId  String?
-  station    Station?                                   @relation(fields: [stationId], references: [id])
-  geom       Unsupported("geometry(LineString, 4326)")?
-  dataSource DataSource                                 @default(manual)
+  station    Station?                                 @relation(fields: [stationId], references: [id])
+  // Generik, bukan LineString khusus — jalur rel gabungan jadi
+  // MultiLineString, rute bus MAPID campuran LineString/MultiLineString.
+  geom       Unsupported("geometry(Geometry, 4326)")?
+  dataSource DataSource                               @default(manual)
+  mapidId    String?                                  @unique
   estimates  TransportEstimate[]
-  createdAt  DateTime                                   @default(now())
+  createdAt  DateTime                                 @default(now())
 }
 
 enum PoiCategory {
@@ -75,6 +77,12 @@ enum PoiCategory {
   toilet
   umkm
   wisata
+  pendidikan
+  kesehatan
+  pemerintahan
+  industri
+  ruang_publik
+  transportasi
 }
 
 model Poi {
@@ -86,6 +94,7 @@ model Poi {
   geom       Unsupported("geometry(Point, 4326)")
   address    String?
   dataSource DataSource                           @default(manual)
+  mapidId    String?                              @unique
   createdAt  DateTime                             @default(now())
 }
 
