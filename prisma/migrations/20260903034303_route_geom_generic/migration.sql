@@ -1,0 +1,1 @@
+ALTER TABLE "Route" ALTER COLUMN "geom" TYPE geometry(Geometry, 4326) USING geom::geometry(Geometry, 4326);

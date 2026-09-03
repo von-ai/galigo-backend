@@ -9,6 +9,7 @@ import poiRoutes from './modules/poi/poi.routes.js';
 import chatRoutes from './modules/chat/chat.routes.js';
 import insightsRoutes from './modules/insights/insight.routes.js';
 import routesRoutes from './modules/routes/routes.routes.js';
+import adminRoutes from './modules/mapid-sync/mapid-sync.routes.js';
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.use('/poi', poiRoutes);
 app.use('/chat', chatRoutes);
 app.use('/insights', insightsRoutes);
 app.use('/routes', routesRoutes);
+app.use('/admin', adminRoutes);
 
 app.use(
   (
