@@ -10,6 +10,8 @@ const router = Router();
 const askSchema = z.object({
   message: z.string().min(1).max(1000),
   stationSlug: z.string().optional(),
+  fromSlug: z.string().optional(),
+  toSlug: z.string().optional(),
 });
 
 // 20 request / 10 menit per IP — cukup longgar untuk percakapan wajar,
@@ -34,7 +36,12 @@ router.post(
         .status(400)
         .json({ message: 'Input tidak valid', issues: parsed.error.issues });
     }
-    const result = await askChat(parsed.data.message, parsed.data.stationSlug);
+    const result = await askChat(
+      parsed.data.message,
+      parsed.data.stationSlug,
+      parsed.data.fromSlug,
+      parsed.data.toSlug,
+    );
     res.json(result);
   }),
 );
