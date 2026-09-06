@@ -36,7 +36,7 @@ function geometryToWKT(geom: { type: string; coordinates: any }): string {
   throw new Error(`Tipe geometri tidak didukung: ${geom.type}`);
 }
 
-async function syncStations(corridorId: string) {
+export async function syncStations(corridorId: string) {
   const data = await fetchMapidLayer(MAPID_LAYERS.stasiunKereta);
   for (const f of data.features) {
     const [lng, lat] = f.geometry.coordinates;
@@ -56,7 +56,7 @@ async function syncStations(corridorId: string) {
   return data.features.length;
 }
 
-async function syncRailLine() {
+export async function syncRailLine() {
   const data = await fetchMapidLayer(MAPID_LAYERS.jalurRelKereta);
   // Ratusan segmen OSM digabung jadi SATU MultiLineString, bukan ratusan
   // baris Route terpisah.
@@ -77,7 +77,7 @@ async function syncRailLine() {
   return data.features.length;
 }
 
-async function syncBusRoutes() {
+export async function syncBusRoutes() {
   const data = await fetchMapidLayer(MAPID_LAYERS.ruteTransSulsel);
   let i = 0;
   for (const f of data.features) {
@@ -96,7 +96,7 @@ async function syncBusRoutes() {
   return data.features.length;
 }
 
-async function syncPoi() {
+export async function syncPoi() {
   const data = await fetchMapidLayer(MAPID_LAYERS.shpTitik);
   for (const f of data.features) {
     // SENGAJA pakai geometry.coordinates, BUKAN properties.Latitude_Y/Longitude_
@@ -118,6 +118,24 @@ async function syncPoi() {
   return data.features.length;
 }
 
+export async function syncRailSpine(corridorId: string) {
+  const stations: { lng: number; lat: number }[] = await prisma.$queryRaw`
+    SELECT ST_X(geom) as lng, ST_Y(geom) as lat
+    FROM "Station"
+    WHERE "corridorId" = ${corridorId} AND "dataSource" = 'mapid'
+    ORDER BY ST_Y(geom) ASC
+  `;
+  if (stations.length < 2) return;
+
+  const wkt = `LINESTRING(${stations.map((s) => `${s.lng} ${s.lat}`).join(', ')})`;
+  await prisma.$executeRawUnsafe(
+    `INSERT INTO "Route" (id, name, mode, "stationId", geom, "dataSource", "mapidId", "createdAt")
+     VALUES (gen_random_uuid(), 'Jalur Rel Kereta (garis penghubung)', 'kereta', NULL, ST_SetSRID(ST_GeomFromText($1), 4326), 'mapid', 'jalur-rel-kereta-spine', now())
+     ON CONFLICT ("mapidId") DO UPDATE SET geom = ST_SetSRID(ST_GeomFromText($1), 4326)`,
+    wkt,
+  );
+}
+
 export async function syncAll() {
   const corridor = await prisma.corridor.upsert({
     where: { slug: 'maros-pangkep-barru' },
@@ -127,6 +145,7 @@ export async function syncAll() {
 
   const stationCount = await syncStations(corridor.id);
   await syncRailLine();
+  await syncRailSpine(corridor.id);
   const busCount = await syncBusRoutes();
   const poiCount = await syncPoi();
 

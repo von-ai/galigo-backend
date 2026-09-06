@@ -56,3 +56,16 @@ export async function getStationBySlug(slug: string) {
 
   return { ...station, estimates, nearbyPois };
 }
+
+// Dipakai untuk analisis dua titik (rencana perjalanan) — cari moda apa
+// saja yang lewat dalam radius 1km dari sebuah koordinat.
+export async function findNearbyModes(lng: number, lat: number) {
+  const rows: { mode: string; name: string; distance_m: number }[] =
+    await prisma.$queryRaw`
+    SELECT mode, name, ST_Distance(geom::geography, ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography) AS distance_m
+    FROM "Route"
+    WHERE ST_DWithin(geom::geography, ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography, 1000)
+    ORDER BY distance_m ASC
+  `;
+  return rows;
+}
