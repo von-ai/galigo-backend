@@ -43,22 +43,26 @@ export async function getStationBySlug(slug: string) {
     where: { stationId: station.id },
   });
 
-  // Radius 600m, terdekat dulu — geography cast bikin ST_Distance mengembalikan meter.
   const nearbyPois = await prisma.$queryRaw<any[]>`
-    SELECT p.id, p.name, p.category, p.address,
-           ST_AsGeoJSON(p.geom)::json AS geometry,
-           ST_Distance(p.geom::geography, s.geom::geography) AS distance_m
-    FROM "Poi" p
-    JOIN "Station" s ON s.id = ${station.id}
-    WHERE ST_DWithin(p.geom::geography, s.geom::geography, 600)
-    ORDER BY distance_m ASC
-  `;
+  SELECT p.id, p.name, p.category, p.address, p.description, p."photoUrl",
+         ST_AsGeoJSON(p.geom)::json AS geometry,
+         ST_Distance(p.geom::geography, s.geom::geography) AS distance_m
+  FROM "Poi" p
+  JOIN "Station" s ON s.id = ${station.id}
+  WHERE ST_DWithin(p.geom::geography, s.geom::geography, 600)
+  ORDER BY distance_m ASC
+`;
 
-  return { ...station, estimates, nearbyPois };
+  const kawasanPois = await prisma.$queryRaw<any[]>`
+  SELECT id, name, category, address
+  FROM "Poi"
+  WHERE "stationId" = ${station.id}
+  ORDER BY name ASC
+`;
+
+  return { ...station, estimates, nearbyPois, kawasanPois };
 }
 
-// Dipakai untuk analisis dua titik (rencana perjalanan) — cari moda apa
-// saja yang lewat dalam radius 1km dari sebuah koordinat.
 export async function findNearbyModes(lng: number, lat: number) {
   const rows: { mode: string; name: string; distance_m: number }[] =
     await prisma.$queryRaw`

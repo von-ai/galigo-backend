@@ -3,10 +3,9 @@ export const MAPID_LAYERS = {
   jalurRelKereta: '6a8c4ab6ba6cb8dfce8c0ac4',
   shpTitik: '6a8c48feba6cb8dfce8af642',
   ruteTransSulsel: '6a8c4702ba6cb8dfce888717',
+  rekomendasiDestinasi: '6aa13f90753cb27abecf2894',
 } as const;
 
-// Kategori asli MAPID -> enum kita. Fallback ke 'ruang_publik' kalau ada
-// kategori baru yang belum dikenal, supaya sync tidak gagal total.
 export const CATEGORY_MAP: Record<string, string> = {
   'Pendidikan Regional': 'pendidikan',
   'Kawasan Industri / Utilitas': 'industri',

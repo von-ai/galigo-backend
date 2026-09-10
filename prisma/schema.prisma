@@ -86,16 +86,18 @@ enum PoiCategory {
 }
 
 model Poi {
-  id         String                               @id @default(uuid())
-  name       String
-  category   PoiCategory
-  stationId  String?
-  station    Station?                             @relation(fields: [stationId], references: [id])
-  geom       Unsupported("geometry(Point, 4326)")
-  address    String?
-  dataSource DataSource                           @default(manual)
-  mapidId    String?                              @unique
-  createdAt  DateTime                             @default(now())
+  id          String                               @id @default(uuid())
+  name        String
+  category    PoiCategory
+  stationId   String?
+  station     Station?                             @relation(fields: [stationId], references: [id])
+  geom        Unsupported("geometry(Point, 4326)")
+  address     String?
+  description String?
+  photoUrl    String?
+  dataSource  DataSource                           @default(manual)
+  mapidId     String?                              @unique
+  createdAt   DateTime                             @default(now())
 }
 
 // "Selalu rentang, tidak pernah hitung mundur" — sesuai design system.
