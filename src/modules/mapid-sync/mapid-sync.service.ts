@@ -96,19 +96,35 @@ export async function syncBusRoutes() {
   return data.features.length;
 }
 
-export async function syncPoi() {
+async function findNearestStationId(
+  lng: number,
+  lat: number,
+): Promise<string | null> {
+  const rows: { id: string }[] = await prisma.$queryRawUnsafe(
+    `SELECT id FROM "Station"
+     WHERE "dataSource" = 'mapid'
+     ORDER BY geom <-> ST_SetSRID(ST_MakePoint($1, $2), 4326)
+     LIMIT 1`,
+    lng,
+    lat,
+  );
+  return rows[0]?.id ?? null;
+}
+
+async function syncPoi() {
   const data = await fetchMapidLayer(MAPID_LAYERS.shpTitik);
   for (const f of data.features) {
-    // SENGAJA pakai geometry.coordinates, BUKAN properties.Latitude_Y/Longitude_
-    // — field itu terbukti kadang meleset atau rusak (lihat "Grand Mall Maros").
     const [lng, lat] = f.geometry.coordinates;
     const category = CATEGORY_MAP[f.properties.Kategori] ?? 'ruang_publik';
+    const nearestStationId = await findNearestStationId(lng, lat); // <-- baru
+
     await prisma.$executeRawUnsafe(
       `INSERT INTO "Poi" (id, name, category, "stationId", geom, address, "dataSource", "mapidId", "createdAt")
-       VALUES (gen_random_uuid(), $1, $2::"PoiCategory", NULL, ST_SetSRID(ST_MakePoint($3, $4), 4326), $5, 'mapid', $6, now())
-       ON CONFLICT ("mapidId") DO UPDATE SET name = $1, category = $2::"PoiCategory", geom = ST_SetSRID(ST_MakePoint($3, $4), 4326)`,
+       VALUES (gen_random_uuid(), $1, $2::"PoiCategory", $3, ST_SetSRID(ST_MakePoint($4, $5), 4326), $6, 'mapid', $7, now())
+       ON CONFLICT ("mapidId") DO UPDATE SET name = $1, category = $2::"PoiCategory", "stationId" = $3, geom = ST_SetSRID(ST_MakePoint($4, $5), 4326)`,
       f.properties.Nama_Lokas,
       category,
+      nearestStationId,
       lng,
       lat,
       f.properties.Kabupaten,
@@ -136,6 +152,29 @@ export async function syncRailSpine(corridorId: string) {
   );
 }
 
+async function syncDestinationRecommendations() {
+  const data = await fetchMapidLayer(MAPID_LAYERS.rekomendasiDestinasi);
+  for (const f of data.features) {
+    const [lng, lat] = f.geometry.coordinates;
+    const name = f.properties['Nama Lokasi'];
+    const description = f.properties['Deskripsi dan Potensi Lokasi'] || null;
+    const photoUrl = f.properties['Foto Lokasi'] || null;
+
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO "Poi" (id, name, category, "stationId", geom, address, description, "photoUrl", "dataSource", "mapidId", "createdAt")
+       VALUES (gen_random_uuid(), $1, 'wisata'::"PoiCategory", NULL, ST_SetSRID(ST_MakePoint($2, $3), 4326), NULL, $4, $5, 'mapid', $6, now())
+       ON CONFLICT ("mapidId") DO UPDATE SET name = $1, description = $4, "photoUrl" = $5, geom = ST_SetSRID(ST_MakePoint($2, $3), 4326)`,
+      name,
+      lng,
+      lat,
+      description,
+      photoUrl,
+      f.id,
+    );
+  }
+  return data.features.length;
+}
+
 export async function syncAll() {
   const corridor = await prisma.corridor.upsert({
     where: { slug: 'maros-pangkep-barru' },
@@ -148,6 +187,7 @@ export async function syncAll() {
   await syncRailSpine(corridor.id);
   const busCount = await syncBusRoutes();
   const poiCount = await syncPoi();
+  const destinationCount = await syncDestinationRecommendations();
 
-  return { stationCount, busCount, poiCount };
+  return { stationCount, busCount, poiCount, destinationCount };
 }

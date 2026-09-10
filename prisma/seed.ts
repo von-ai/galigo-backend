@@ -5,12 +5,24 @@ import * as bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-  // Ganti password ini segera setelah pertama kali login.
-  const passwordHash = await bcrypt.hash('ganti-password-ini', 10);
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const adminName = process.env.ADMIN_NAME;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+
+  if (!adminEmail || !adminName || !adminPassword) {
+    throw new Error(
+      'ADMIN_EMAIL, ADMIN_NAME, dan ADMIN_PASSWORD wajib diisi di .env sebelum seed.',
+    );
+  }
+  if (adminPassword.length < 6) {
+    throw new Error('ADMIN_PASSWORD minimal 6 karakter.');
+  }
+
+  const passwordHash = await bcrypt.hash(adminPassword, 10);
   await prisma.user.upsert({
-    where: { email: 'dishub@example.id' },
-    update: {},
-    create: { email: 'dishub@example.id', passwordHash, name: 'Admin Dishub' },
+    where: { email: adminEmail },
+    update: { name: adminName, passwordHash },
+    create: { email: adminEmail, name: adminName, passwordHash },
   });
 
   const corridor = await prisma.corridor.upsert({
@@ -18,6 +30,7 @@ async function main() {
     update: {},
     create: { name: 'Maros–Pangkep–Barru', slug: 'maros-pangkep-barru' },
   });
+  await prisma.user.deleteMany({ where: { email: 'dishub@example.id' } });
 
   const stations = [
     {

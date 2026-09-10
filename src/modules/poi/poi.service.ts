@@ -1,24 +1,21 @@
-// src/modules/poi/poi.service.ts
 import { prisma } from '../../lib/prisma.js';
 
 export async function listPoi(category?: string) {
   if (category) {
     return prisma.$queryRaw<any[]>`
-      SELECT id, name, category, "stationId", address, "dataSource",
+      SELECT id, name, category, "stationId", address, description, "photoUrl", "dataSource",
              ST_AsGeoJSON(geom)::json AS geometry
       FROM "Poi"
       WHERE category = ${category}::"PoiCategory"
     `;
   }
   return prisma.$queryRaw<any[]>`
-    SELECT id, name, category, "stationId", address, "dataSource",
+    SELECT id, name, category, "stationId", address, description, "photoUrl", "dataSource",
            ST_AsGeoJSON(geom)::json AS geometry
     FROM "Poi"
   `;
 }
 
-// Jalur manual — sync MAPID nanti akan insert lewat fungsi terpisah dengan
-// dataSource='mapid', tabel dan bentuk datanya sama persis.
 export async function createManualPoi(input: {
   name: string;
   category: string;
