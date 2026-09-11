@@ -36,7 +36,7 @@ function geometryToWKT(geom: { type: string; coordinates: any }): string {
   throw new Error(`Tipe geometri tidak didukung: ${geom.type}`);
 }
 
-export async function syncStations(corridorId: string) {
+async function syncStations(corridorId: string) {
   const data = await fetchMapidLayer(MAPID_LAYERS.stasiunKereta);
   for (const f of data.features) {
     const [lng, lat] = f.geometry.coordinates;
@@ -44,7 +44,12 @@ export async function syncStations(corridorId: string) {
     await prisma.$executeRawUnsafe(
       `INSERT INTO "Station" (id, "corridorId", name, slug, "order", geom, "dataSource", "mapidId", "createdAt", "updatedAt")
        VALUES (gen_random_uuid(), $1, $2, $3, 0, ST_SetSRID(ST_MakePoint($4, $5), 4326), 'mapid', $6, now(), now())
-       ON CONFLICT ("mapidId") DO UPDATE SET name = $2, geom = ST_SetSRID(ST_MakePoint($4, $5), 4326), "updatedAt" = now()`,
+       ON CONFLICT (slug) DO UPDATE SET
+         name = $2,
+         geom = ST_SetSRID(ST_MakePoint($4, $5), 4326),
+         "dataSource" = 'mapid',
+         "mapidId" = $6,
+         "updatedAt" = now()`,
       corridorId,
       name,
       toSlug(f.properties.name),
