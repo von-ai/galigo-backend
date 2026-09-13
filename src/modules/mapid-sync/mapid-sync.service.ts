@@ -61,6 +61,30 @@ async function syncStations(corridorId: string) {
   return data.features.length;
 }
 
+async function syncAngkotRoutes() {
+  const data = await fetchMapidLayer(MAPID_LAYERS.jalurAngkot);
+  let synced = 0;
+  for (const f of data.features) {
+    // Rute yang sudah tidak beroperasi TIDAK disinkron — menampilkannya
+    // di peta akan menyesatkan pengguna mengira masih bisa dipakai.
+    if (f.properties.Ket !== 'Aktif') continue;
+
+    const name = `Pete-pete ${f.properties.Kode} — ${f.properties.Origin} - ${f.properties.Destinasi}`;
+    const wkt = geometryToWKT(f.geometry);
+
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO "Route" (id, name, mode, "stationId", geom, "dataSource", "mapidId", "createdAt")
+       VALUES (gen_random_uuid(), $1, 'pete_pete', NULL, ST_SetSRID(ST_GeomFromText($2), 4326), 'mapid', $3, now())
+       ON CONFLICT ("mapidId") DO UPDATE SET name = $1, geom = ST_SetSRID(ST_GeomFromText($2), 4326)`,
+      name,
+      wkt,
+      f.id,
+    );
+    synced++;
+  }
+  return synced;
+}
+
 export async function syncRailLine() {
   const data = await fetchMapidLayer(MAPID_LAYERS.jalurRelKereta);
   // Ratusan segmen OSM digabung jadi SATU MultiLineString, bukan ratusan
@@ -191,8 +215,9 @@ export async function syncAll() {
   await syncRailLine();
   await syncRailSpine(corridor.id);
   const busCount = await syncBusRoutes();
+  const angkotCount = await syncAngkotRoutes();
   const poiCount = await syncPoi();
   const destinationCount = await syncDestinationRecommendations();
 
-  return { stationCount, busCount, poiCount, destinationCount };
+  return { stationCount, busCount, poiCount, destinationCount, angkotCount };
 }
