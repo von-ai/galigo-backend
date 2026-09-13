@@ -10,7 +10,9 @@ declare global {
 }
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
-  const token = req.cookies?.galigo_token;
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
   if (!token) {
     return res.status(401).json({ message: 'Belum login' });
   }
