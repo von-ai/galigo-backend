@@ -27,18 +27,12 @@ router.post(
         parsed.data.email,
         parsed.data.password,
       );
-      res.cookie('galigo_token', token, {
-        httpOnly: true,
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 8 * 60 * 60 * 1000,
-      });
-      res.json({ user });
+      res.json({ token, user });
     } catch (err) {
       if (err instanceof AuthServiceError) {
         return res.status(401).json({ message: err.message });
       }
-      throw err; // sekarang benar-benar tertangkap oleh asyncHandler → error handler global
+      throw err;
     }
   }),
 );
@@ -52,7 +46,8 @@ router.get(
 );
 
 router.post('/logout', (_req, res) => {
-  res.clearCookie('galigo_token');
+  // Stateless JWT — tidak ada yang perlu di-invalidate di server.
+  // Client yang hapus token dari localStorage-nya sendiri.
   res.json({ ok: true });
 });
 
